@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171819">
+  <meta name="description" content="МаякФотошоп — простой онлайн-редактор фотографий. Загружайте, редактируйте и сохраняйте изображения.">
+  <title>МаякФотошоп — фоторедактор</title>
+  <link rel="icon" href="./mayak-icon.svg" type="image/svg+xml">
+  <link rel="alternate icon" href="./mayak-icon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="./mayak-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="МаякФотошоп"><span class="brand-icon">м<span>✳</span></span><span>маяк<span class="brand-light">фотошоп</span></span></a>
+    <div class="document-name"><span class="live-dot"></span><span id="documentName">Новый проект</span><span class="saved-state" id="savedState">· готов</span></div>
+    <div class="top-actions">
+      <a class="button button-quiet app-download" id="downloadAppButton" href="./MayakPhotoshop.exe" download="MayakPhotoshop.exe" title="Скачать приложение"><span class="download-text">Скачать приложение</span><span>↧</span></a>
+      <button class="button button-quiet" id="undoButton" title="Отменить изменения" disabled>↶ <span>Отменить</span></button>
+      <button class="button button-quiet redo-button" id="redoButton" title="Вернуть действие" disabled>↷</button>
+      <button class="button button-quiet" id="resetButton" title="Сбросить настройки" disabled>Сбросить</button>
+      <button class="button button-primary" id="exportButton" disabled>Скачать <span>↓</span></button>
+      <button class="mobile-panel-toggle" id="panelToggle" aria-label="Настройки">☷</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="tool-rail" aria-label="Инструменты">
+      <button class="tool active" data-tool="move" title="Перемещение (V)"><span class="tool-glyph">↖</span><span>Перемещение</span></button>
+      <button class="tool" data-tool="text" title="Добавить текст"><span class="tool-glyph">T</span><span>Текст</span></button>
+      <button class="tool" data-tool="crop" title="Обрезка"><span class="tool-glyph">⌗</span><span>Обрезка</span></button>
+      <div class="rail-divider"></div>
+      <button class="tool" id="flipButton" title="Отразить по горизонтали"><span class="tool-glyph">⇋</span><span>Отразить</span></button>
+      <button class="tool" id="rotateButton" title="Повернуть на 90°"><span class="tool-glyph">⟳</span><span>Повернуть</span></button>
+      <div class="rail-spacer"></div>
+      <button class="tool" id="openRailButton" title="Открыть изображение"><span class="tool-glyph">＋</span><span>Открыть</span></button>
+    </aside>
+
+    <section class="canvas-area" id="dropZone" aria-label="Холст редактора">
+      <div class="canvas-toolbar">
+        <div class="canvas-tools"><span class="tool-indicator" id="toolIndicator">↖</span><span id="toolName">Перемещение</span><span class="toolbar-divider"></span><span id="imageDimensions">—</span></div>
+        <div class="zoom-tools"><button id="compareButton" class="compare-button" disabled>Сравнить</button><span class="toolbar-divider"></span><button id="zoomOut" aria-label="Уменьшить масштаб">−</button><span id="zoomValue">100%</span><button id="zoomIn" aria-label="Увеличить масштаб">+</button><span class="toolbar-divider"></span><button id="fitButton">Вписать</button></div>
+      </div>
+      <div class="canvas-stage" id="canvasStage">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon"><span>✳</span></div>
+          <h1>Ваше полотно<br><em>ждёт идею.</em></h1>
+          <p>Откройте фотографию, чтобы начать редактирование</p>
+          <button class="button button-primary open-button" id="openButton">Открыть изображение <span>↑</span></button>
+          <span class="drop-hint">или перетащите файл сюда</span>
+          <span class="file-hint">JPG, PNG, WEBP · до 20 МБ</span>
+        </div>
+        <canvas id="editorCanvas" aria-label="Редактируемое изображение"></canvas>
+        <div class="crop-overlay" id="cropOverlay" hidden><div class="crop-box" id="cropBox"><i data-corner="nw"></i><i data-corner="ne"></i><i data-corner="sw"></i><i data-corner="se"></i></div><div class="crop-actions"><select id="cropRatio" aria-label="Пропорции кадрирования"><option value="free">Свободно</option><option value="1:1">1 : 1</option><option value="4:3">4 : 3</option><option value="3:2">3 : 2</option><option value="16:9">16 : 9</option><option value="9:16">9 : 16</option></select><button id="cancelCrop">Отмена</button><button id="applyCrop">Применить обрезку</button></div></div>
+        <div class="drag-message" id="dragMessage">Отпустите, чтобы открыть изображение</div>
+      </div>
+      <div class="canvas-footer"><span><span class="shortcut">⌘/Ctrl</span> + O — открыть</span><span id="canvasHint">Перетащите изображение в окно редактора</span><span>МаякФотошоп <b>✳</b></span></div>
+    </section>
+
+    <aside class="properties" id="propertiesPanel">
+      <div class="panel-heading"><div><p class="eyebrow">Рабочее пространство</p><h2>Настройки</h2></div><button class="panel-close" id="panelClose" aria-label="Закрыть настройки">×</button></div>
+      <section class="panel-section image-section">
+        <div class="section-title"><span>Изображение</span><span class="section-count">01</span></div>
+        <div class="image-card" id="imageCard"><div class="mini-preview" id="miniPreview"><span>✳</span></div><div class="image-meta"><strong id="sideImageName">Без изображения</strong><span id="sideImageSize">Откройте файл, чтобы начать</span></div><button class="replace-image" id="replaceButton" title="Заменить изображение">↗</button></div>
+      </section>
+      <section class="panel-section">
+        <div class="section-title"><span>Свет и цвет</span><button class="reset-small" id="resetAdjustments">Сбросить</button></div>
+        <label class="slider-row"><span>Яркость <output id="brightnessValue">100%</output></span><input type="range" id="brightness" min="0" max="200" value="100"></label>
+        <label class="slider-row"><span>Контраст <output id="contrastValue">100%</output></span><input type="range" id="contrast" min="0" max="200" value="100"></label>
+        <label class="slider-row"><span>Насыщенность <output id="saturationValue">100%</output></span><input type="range" id="saturation" min="0" max="200" value="100"></label>
+        <label class="slider-row"><span>Теплота <output id="warmthValue">0</output></span><input type="range" id="warmth" min="-50" max="50" value="0"></label>
+        <label class="slider-row"><span>Размытие <output id="blurValue">0px</output></span><input type="range" id="blur" min="0" max="12" value="0"></label>
+      </section>
+      <section class="panel-section preset-section">
+        <div class="section-title"><span>Быстрые фильтры</span><span class="section-count">FX</span></div>
+        <div class="preset-grid">
+          <button class="preset active" data-preset="original"><span class="preset-swatch swatch-original">Aa</span>Оригинал</button>
+          <button class="preset" data-preset="film"><span class="preset-swatch swatch-film">Aa</span>Плёнка</button>
+          <button class="preset" data-preset="mono"><span class="preset-swatch swatch-mono">Aa</span>Ч/Б</button>
+          <button class="preset" data-preset="warm"><span class="preset-swatch swatch-warm">Aa</span>Тёплый</button>
+          <button class="preset" data-preset="fade"><span class="preset-swatch swatch-fade">Aa</span>Матовый</button>
+          <button class="preset" data-preset="dream"> <span class="preset-swatch swatch-dream">Aa</span>Сон</button>
+        </div>
+      </section>
+      <section class="panel-section text-panel" id="textPanel">
+        <div class="section-title"><span>Добавить текст</span><span class="section-count">T</span></div>
+        <label class="input-label" for="textInput">Текст на изображении</label>
+        <input class="text-input" id="textInput" type="text" placeholder="Введите подпись…" maxlength="80">
+        <div class="text-options"><label>Размер<select id="textSize"><option value="32">Небольшой</option><option value="56" selected>Средний</option><option value="88">Крупный</option></select></label><label>Цвет<input id="textColor" type="color" value="#ffffff" aria-label="Цвет текста"></label></div>
+        <button class="add-text-button" id="addTextButton" disabled>＋ Добавить на фото</button>
+        <div class="edit-text-controls" id="editTextControls" hidden><label class="input-label" for="editTextInput">Выбранный слой</label><input class="text-input" id="editTextInput" type="text" maxlength="80"><div class="text-options"><label>Размер<select id="editTextSize"><option value="32">Небольшой</option><option value="56">Средний</option><option value="88">Крупный</option><option value="120">Плакатный</option></select></label><label>Цвет<input id="editTextColor" type="color" value="#ffffff" aria-label="Цвет выбранного текста"></label></div><button class="add-text-button" id="saveTextButton">Сохранить изменения</button></div>
+      </section>
+      <section class="panel-section layers-section">
+        <div class="section-title"><span>Слои</span><button class="add-layer" id="addTextLayer" title="Добавить текстовый слой">＋</button></div>
+        <div class="layer-row selected"><span class="layer-eye">◉</span><span class="layer-thumb" id="layerThumb">▧</span><span class="layer-name" id="layerName">Изображение</span><span class="layer-lock">⌑</span></div>
+        <div id="textLayers"></div>
+      </section>
+      <section class="panel-section export-section">
+        <div class="section-title"><span>Экспорт</span><span class="section-count">↓</span></div>
+        <div class="export-options"><label>Формат<select id="exportFormat"><option value="image/png">PNG · без потерь</option><option value="image/jpeg">JPEG · меньше размер</option></select></label><label>Размер<select id="exportScale"><option value="1">100% · оригинал</option><option value="0.75">75%</option><option value="0.5">50%</option></select></label></div>
+        <label class="slider-row quality-row"><span>Качество JPEG <output id="qualityValue">88%</output></span><input type="range" id="exportQuality" min="50" max="100" value="88"></label>
+      </section>
+      <div class="panel-note"><span>✳</span><p>Ваши изображения обрабатываются в браузере и никуда не отправляются.</p></div>
+    </aside>
+  </main>
+  <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+  <div class="toast" id="toast" role="status"></div>
+</body>
+</html>
