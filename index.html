@@ -24,7 +24,13 @@
       <button class="button button-quiet" id="undoButton" title="Отменить изменения" disabled>↶ <span>Отменить</span></button>
       <button class="button button-quiet redo-button" id="redoButton" title="Вернуть действие" disabled>↷</button>
       <button class="button button-quiet" id="resetButton" title="Сбросить настройки" disabled>Сбросить</button>
-      <button class="button button-primary" id="exportButton" disabled>Скачать <span>↓</span></button>
+      <div class="download-wrap">
+        <button class="button button-primary" id="exportButton" aria-expanded="false" aria-haspopup="menu" disabled>Скачать <span>⌄</span></button>
+        <div class="download-menu" id="downloadMenu" role="menu" hidden>
+          <button id="downloadImageButton" role="menuitem"><span class="download-menu-icon">▧</span><span>Картинка <small>PNG</small></span></button>
+          <button id="downloadProjectButton" role="menuitem"><span class="download-menu-icon">◈</span><span>Проект <small>.MAYAK</small></span></button>
+        </div>
+      </div>
       <button class="mobile-panel-toggle" id="panelToggle" aria-label="Настройки">☷</button>
     </div>
   </header>
@@ -108,7 +114,7 @@
       <div class="panel-note"><span>✳</span><p>Ваши изображения обрабатываются в браузере и никуда не отправляются.</p></div>
     </aside>
   </main>
-  <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+  <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,.mayak,application/json" hidden>
   <div class="toast" id="toast" role="status"></div>
 </body>
 </html>

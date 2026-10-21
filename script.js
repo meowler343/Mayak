@@ -11,6 +11,7 @@ if (appMode) $('#downloadAppButton').hidden = true;
 const defaults = { brightness: 100, contrast: 100, saturation: 100, warmth: 0, blur: 0 };
 let image = null;
 let imageUrl = '';
+let imageDataUrl = '';
 let adjustments = { ...defaults };
 let rotation = 0;
 let flipped = false;
@@ -159,38 +160,69 @@ function updateLayerList() {
   });
 }
 
+function setEditorImage(nextImage, name, source, projectState = null) {
+  if (imageUrl) URL.revokeObjectURL(imageUrl);
+  imageUrl = source.startsWith('blob:') ? source : '';
+  imageDataUrl = source.startsWith('data:') ? source : '';
+  image = nextImage;
+  adjustments = { ...defaults }; rotation = 0; flipped = false; zoom = 1;
+  textLayers = []; undoStack = []; redoStack = []; activePreset = 'original'; activeTextIndex = -1;
+  if (projectState) {
+    const savedAdjustments = projectState.adjustments || {};
+    for (const key of Object.keys(defaults)) {
+      const min = Number($(`#${key}`).min), max = Number($(`#${key}`).max);
+      const value = Number(savedAdjustments[key]);
+      if (Number.isFinite(value)) adjustments[key] = Math.max(min, Math.min(max, value));
+    }
+    rotation = [0, 90, 180, 270].includes(Number(projectState.rotation)) ? Number(projectState.rotation) : 0;
+    flipped = projectState.flipped === true;
+    activePreset = presets[projectState.activePreset] ? projectState.activePreset : 'original';
+    textLayers = Array.isArray(projectState.textLayers) ? projectState.textLayers.slice(0, 100).filter((layer) => layer && typeof layer.text === 'string' && layer.text.trim()).map((layer) => ({
+      text: layer.text.slice(0, 80), size: [32, 56, 88, 120].includes(Number(layer.size)) ? Number(layer.size) : 56,
+      color: /^#[\da-f]{6}$/i.test(layer.color) ? layer.color : '#ffffff',
+      x: Math.max(0, Math.min(1, Number(layer.x) || .5)), y: Math.max(0, Math.min(1, Number(layer.y) || .82))
+    })) : [];
+  }
+  emptyState.hidden = true; canvas.style.display = 'block';
+  $('#documentName').textContent = name; $('#sideImageName').textContent = name;
+  $('#sideImageSize').textContent = `${nextImage.naturalWidth} × ${nextImage.naturalHeight} px`;
+  $('#layerName').textContent = name;
+  $('#miniPreview').replaceChildren();
+  const thumbnail = document.createElement('img'); thumbnail.src = source; thumbnail.alt = '';
+  $('#miniPreview').append(thumbnail);
+  $('#exportButton').disabled = false; $('#compareButton').disabled = false;
+  $('#resetButton').disabled = false; $('#addTextButton').disabled = false;
+  $('#editTextControls').hidden = true;
+  $('#canvasHint').textContent = 'Настройте фото и сохраните результат';
+  updateOutputs(); updatePresetButtons(); updateHistoryButtons(); render();
+  properties.classList.remove('open');
+}
+
+function openProject(file) {
+  if (file.size > 100 * 1024 * 1024) { showToast('Проект больше 100 МБ.'); return; }
+  file.text().then((text) => {
+    const project = JSON.parse(text);
+    if (project.format !== 'mayak' || project.version !== 1 || typeof project.imageData !== 'string' || !project.imageData.startsWith('data:image/')) {
+      throw new Error('Это не файл проекта МаякФотошоп.');
+    }
+    const nextImage = new Image();
+    nextImage.onload = () => {
+      setEditorImage(nextImage, file.name, project.imageData, project.state || {});
+      showToast('Проект .mayak открыт');
+    };
+    nextImage.onerror = () => showToast('В проекте не удалось открыть изображение.');
+    nextImage.src = project.imageData;
+  }).catch((error) => showToast(error.message || 'Не удалось прочитать проект .mayak.'));
+}
+
 function openImage(file) {
   if (!file) return;
-  if (!file.type.startsWith('image/')) { showToast('Выберите файл изображения.'); return; }
+  if (file.name.toLowerCase().endsWith('.mayak')) { openProject(file); return; }
+  if (!file.type.startsWith('image/')) { showToast('Выберите изображение или проект .mayak.'); return; }
   if (file.size > 20 * 1024 * 1024) { showToast('Файл больше 20 МБ. Выберите изображение поменьше.'); return; }
   const nextUrl = URL.createObjectURL(file);
   const nextImage = new Image();
-  nextImage.onload = () => {
-    if (imageUrl) URL.revokeObjectURL(imageUrl);
-    imageUrl = nextUrl;
-    image = nextImage;
-    adjustments = { ...defaults };
-    rotation = 0; flipped = false; zoom = 1; textLayers = []; undoStack = []; redoStack = [];
-    activePreset = 'original'; activeTextIndex = -1; $('#editTextControls').hidden = true;
-    emptyState.hidden = true;
-    canvas.style.display = 'block';
-    $('#documentName').textContent = file.name;
-    $('#sideImageName').textContent = file.name;
-    $('#sideImageSize').textContent = `${Math.round(nextImage.naturalWidth)} × ${Math.round(nextImage.naturalHeight)} px`;
-    $('#layerName').textContent = file.name;
-    $('#miniPreview').replaceChildren();
-    const thumbnail = document.createElement('img'); thumbnail.src = nextUrl; thumbnail.alt = '';
-    $('#miniPreview').append(thumbnail);
-    $('#exportButton').disabled = false;
-    $('#compareButton').disabled = false;
-    $('#resetButton').disabled = false;
-    $('#addTextButton').disabled = false;
-    $('#canvasHint').textContent = 'Настройте фото и сохраните результат';
-    updateOutputs(); updatePresetButtons(); updateHistoryButtons();
-    render();
-    showToast('Изображение открыто');
-    properties.classList.remove('open');
-  };
+  nextImage.onload = () => { setEditorImage(nextImage, file.name, nextUrl); showToast('Изображение открыто'); };
   nextImage.onerror = () => { URL.revokeObjectURL(nextUrl); showToast('Не удалось открыть это изображение.'); };
   nextImage.src = nextUrl;
 }
@@ -237,6 +269,33 @@ function exportImage() {
     setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     showToast(`Готово — скачан файл ${extension.toUpperCase()}`);
   }, format, Number($('#exportQuality').value) / 100);
+}
+
+function saveProject() {
+  if (!image) return;
+  let imageData = imageDataUrl;
+  try {
+    if (!imageData) {
+      const source = document.createElement('canvas');
+      source.width = image.naturalWidth; source.height = image.naturalHeight;
+      source.getContext('2d').drawImage(image, 0, 0);
+      imageData = source.toDataURL('image/png');
+    }
+  } catch { showToast('Не удалось подготовить изображение для проекта.'); return; }
+  const project = {
+    format: 'mayak', version: 1, app: 'МаякФотошоп',
+    imageName: $('#sideImageName').textContent,
+    imageData,
+    state: { adjustments: { ...adjustments }, rotation, flipped, activePreset,
+      textLayers: textLayers.map((layer) => ({ ...layer })) }
+  };
+  const blob = new Blob([JSON.stringify(project)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const base = ($('#documentName').textContent || 'Проект').replace(/\.mayak$/i, '').replace(/\.[^.]+$/, '').replace(/[<>:"/\\|?*]/g, '-');
+  link.href = url; link.download = `${base || 'Проект'}.mayak`; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('Проект .mayak сохранён');
 }
 
 function updatePresetButtons() {
@@ -319,6 +378,7 @@ function applyCrop() {
   croppedImage.onload = () => {
     saveUndo();
     image = croppedImage;
+    imageDataUrl = '';
     rotation = 0; flipped = false; textLayers = [];
     adjustments = { ...defaults }; activePreset = 'original'; activeTextIndex = -1;
     updateOutputs(); updatePresetButtons(); render();
@@ -333,7 +393,18 @@ $('#openButton').addEventListener('click', () => fileInput.click());
 $('#openRailButton').addEventListener('click', () => fileInput.click());
 $('#replaceButton').addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', (event) => { openImage(event.target.files[0]); event.target.value = ''; });
-$('#exportButton').addEventListener('click', exportImage);
+$('#exportButton').addEventListener('click', () => {
+  const menu = $('#downloadMenu');
+  menu.hidden = !menu.hidden;
+  $('#exportButton').setAttribute('aria-expanded', String(!menu.hidden));
+  $('#downloadImageButton small').textContent = $('#exportFormat').value === 'image/jpeg' ? 'JPEG' : 'PNG';
+});
+$('#downloadImageButton').addEventListener('click', () => {
+  $('#downloadMenu').hidden = true; $('#exportButton').setAttribute('aria-expanded', 'false'); exportImage();
+});
+$('#downloadProjectButton').addEventListener('click', () => {
+  $('#downloadMenu').hidden = true; $('#exportButton').setAttribute('aria-expanded', 'false'); saveProject();
+});
 $('#undoButton').addEventListener('click', undo);
 $('#redoButton').addEventListener('click', redo);
 $('#resetButton').addEventListener('click', resetAdjustments);
@@ -362,6 +433,15 @@ $('#saveTextButton').addEventListener('click', () => {
 });
 
 $('#exportQuality').addEventListener('input', (event) => { $('#qualityValue').textContent = `${event.target.value}%`; });
+$('#exportFormat').addEventListener('change', () => {
+  $('#downloadImageButton small').textContent = $('#exportFormat').value === 'image/jpeg' ? 'JPEG' : 'PNG';
+});
+document.addEventListener('pointerdown', (event) => {
+  if (!event.target.closest('.download-wrap')) {
+    $('#downloadMenu').hidden = true;
+    $('#exportButton').setAttribute('aria-expanded', 'false');
+  }
+});
 
 canvas.addEventListener('pointerdown', (event) => {
   if (!image || canvas.dataset.tool === 'text' || canvas.dataset.tool === 'crop') return;
@@ -446,7 +526,7 @@ stage.addEventListener('drop', (event) => openImage(event.dataTransfer.files[0])
 window.addEventListener('resize', fitCanvas);
 window.addEventListener('keydown', (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') { event.preventDefault(); fileInput.click(); }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); exportImage(); }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); if (event.shiftKey) saveProject(); else exportImage(); }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); if (event.shiftKey) redo(); else undo(); }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); }
   if (event.key === 'Delete' && activeTextIndex >= 0 && !['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName)) { saveUndo(); textLayers.splice(activeTextIndex, 1); activeTextIndex = -1; $('#editTextControls').hidden = true; render(); }
@@ -454,5 +534,5 @@ window.addEventListener('keydown', (event) => {
     const shortcuts = { v: 'move', t: 'text', c: 'crop' };
     if (shortcuts[event.key.toLowerCase()]) activateTool(shortcuts[event.key.toLowerCase()]);
   }
-  if (event.key === 'Escape') { $('#cropOverlay').hidden = true; activateTool('move'); }
+  if (event.key === 'Escape') { $('#downloadMenu').hidden = true; $('#exportButton').setAttribute('aria-expanded', 'false'); $('#cropOverlay').hidden = true; activateTool('move'); }
 });
