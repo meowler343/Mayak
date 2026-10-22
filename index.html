@@ -6,21 +6,33 @@
   <meta name="theme-color" content="#171819">
   <meta name="description" content="МаякФотошоп — простой онлайн-редактор фотографий. Загружайте, редактируйте и сохраняйте изображения.">
   <title>МаякФотошоп — фоторедактор</title>
-  <link rel="icon" href="./mayak-icon.svg" type="image/svg+xml">
-  <link rel="alternate icon" href="./mayak-icon.ico" sizes="any">
-  <link rel="apple-touch-icon" href="./mayak-icon.png">
+  <script>
+    (() => {
+      const version = new URLSearchParams(window.location.search).get('v');
+      const suffix = version ? `?v=${encodeURIComponent(version)}` : '';
+      document.write(`<link rel="icon" href="./mayak-icon.svg${suffix}" type="image/svg+xml">`);
+      document.write(`<link rel="alternate icon" href="./mayak-icon.ico${suffix}" sizes="any">`);
+      document.write(`<link rel="apple-touch-icon" href="./mayak-icon.png${suffix}">`);
+      document.write(`<link rel="stylesheet" href="./styles.css${suffix}">`);
+      document.write(`<script defer src="./script.js${suffix}"><\/script>`);
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-  <script src="script.js" defer></script>
 </head>
 <body>
   <header class="topbar">
     <a class="brand" href="#" aria-label="МаякФотошоп"><span class="brand-icon">м<span>✳</span></span><span>маяк<span class="brand-light">фотошоп</span></span></a>
     <div class="document-name"><span class="live-dot"></span><span id="documentName">Новый проект</span><span class="saved-state" id="savedState">· готов</span></div>
     <div class="top-actions">
-      <a class="button button-quiet app-download" id="downloadAppButton" href="./MayakPhotoshop.exe" download="MayakPhotoshop.exe" title="Скачать приложение"><span class="download-text">Скачать приложение</span><span>↧</span></a>
+      <div class="app-download-wrap">
+        <button class="button button-quiet app-download" id="downloadAppButton" type="button" aria-expanded="false" aria-haspopup="menu" title="Скачать программу"><span class="download-text">Скачать программу</span><span>↧</span></button>
+        <div class="app-download-menu" id="appDownloadMenu" role="menu" hidden>
+          <a href="./MayakPhotoshop.apk" download="MayakPhotoshop.apk" role="menuitem"><span class="app-download-menu-icon">◉</span><span>Для Android<small>APK</small></span></a>
+          <a href="./MayakPhotoshop.exe" download="MayakPhotoshop.exe" role="menuitem"><span class="app-download-menu-icon">▣</span><span>Для Windows<small>EXE</small></span></a>
+        </div>
+      </div>
       <button class="button button-quiet" id="undoButton" title="Отменить изменения" disabled>↶ <span>Отменить</span></button>
       <button class="button button-quiet redo-button" id="redoButton" title="Вернуть действие" disabled>↷</button>
       <button class="button button-quiet" id="resetButton" title="Сбросить настройки" disabled>Сбросить</button>

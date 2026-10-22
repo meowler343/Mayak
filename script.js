@@ -6,7 +6,7 @@ const fileInput = $('#fileInput');
 const emptyState = $('#emptyState');
 const properties = $('#propertiesPanel');
 const appMode = new URLSearchParams(window.location.search).get('app') === '1';
-if (appMode) $('#downloadAppButton').hidden = true;
+if (appMode) $('#downloadAppButton').parentElement.hidden = true;
 
 const defaults = { brightness: 100, contrast: 100, saturation: 100, warmth: 0, blur: 0 };
 let image = null;
@@ -40,6 +40,36 @@ function showToast(message) {
   toast.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+}
+
+function downloadBlob(blob, filename, successMessage) {
+  const bridge = window.MayakAndroid;
+  if (bridge && typeof bridge.beginSave === 'function' && bridge.beginSave(filename, blob.type || 'application/octet-stream')) {
+    const chunkSize = 256 * 1024;
+    let offset = 0;
+    const writeNextChunk = () => {
+      const chunk = blob.slice(offset, offset + chunkSize);
+      const reader = new FileReader();
+      reader.onload = () => {
+        bridge.appendSaveChunk(String(reader.result).split(',')[1] || '');
+        offset += chunk.size;
+        if (offset < blob.size) writeNextChunk();
+        else { bridge.finishSave(); showToast(successMessage); }
+      };
+      reader.onerror = () => showToast('Не удалось сохранить файл.');
+      reader.readAsDataURL(chunk);
+    };
+    if (blob.size) writeNextChunk();
+    else { bridge.finishSave(); showToast(successMessage); }
+    return;
+  }
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast(successMessage);
 }
 
 function saveUndo() {
@@ -260,14 +290,9 @@ function exportImage() {
   outCtx.drawImage(canvas, 0, 0, output.width, output.height);
   output.toBlob((blob) => {
     if (!blob) { showToast('Не удалось сохранить изображение.'); return; }
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
     const base = ($('#documentName').textContent || 'mayak').replace(/\.[^.]+$/, '');
     const extension = format === 'image/jpeg' ? 'jpg' : 'png';
-    link.download = `${base}-mayak.${extension}`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-    showToast(`Готово — скачан файл ${extension.toUpperCase()}`);
+    downloadBlob(blob, `${base}-mayak.${extension}`, `Готово — файл ${extension.toUpperCase()} сохранён`);
   }, format, Number($('#exportQuality').value) / 100);
 }
 
@@ -290,12 +315,8 @@ function saveProject() {
       textLayers: textLayers.map((layer) => ({ ...layer })) }
   };
   const blob = new Blob([JSON.stringify(project)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
   const base = ($('#documentName').textContent || 'Проект').replace(/\.mayak$/i, '').replace(/\.[^.]+$/, '').replace(/[<>:"/\\|?*]/g, '-');
-  link.href = url; link.download = `${base || 'Проект'}.mayak`; link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showToast('Проект .mayak сохранён');
+  downloadBlob(blob, `${base || 'Проект'}.mayak`, 'Проект .mayak сохранён');
 }
 
 function updatePresetButtons() {
@@ -399,6 +420,15 @@ $('#exportButton').addEventListener('click', () => {
   $('#exportButton').setAttribute('aria-expanded', String(!menu.hidden));
   $('#downloadImageButton small').textContent = $('#exportFormat').value === 'image/jpeg' ? 'JPEG' : 'PNG';
 });
+$('#downloadAppButton').addEventListener('click', () => {
+  const menu = $('#appDownloadMenu');
+  menu.hidden = !menu.hidden;
+  $('#downloadAppButton').setAttribute('aria-expanded', String(!menu.hidden));
+});
+$('#appDownloadMenu').querySelectorAll('a').forEach((link) => link.addEventListener('click', () => {
+  $('#appDownloadMenu').hidden = true;
+  $('#downloadAppButton').setAttribute('aria-expanded', 'false');
+}));
 $('#downloadImageButton').addEventListener('click', () => {
   $('#downloadMenu').hidden = true; $('#exportButton').setAttribute('aria-expanded', 'false'); exportImage();
 });
@@ -440,6 +470,10 @@ document.addEventListener('pointerdown', (event) => {
   if (!event.target.closest('.download-wrap')) {
     $('#downloadMenu').hidden = true;
     $('#exportButton').setAttribute('aria-expanded', 'false');
+  }
+  if (!event.target.closest('.app-download-wrap')) {
+    $('#appDownloadMenu').hidden = true;
+    $('#downloadAppButton').setAttribute('aria-expanded', 'false');
   }
 });
 
@@ -534,5 +568,5 @@ window.addEventListener('keydown', (event) => {
     const shortcuts = { v: 'move', t: 'text', c: 'crop' };
     if (shortcuts[event.key.toLowerCase()]) activateTool(shortcuts[event.key.toLowerCase()]);
   }
-  if (event.key === 'Escape') { $('#downloadMenu').hidden = true; $('#exportButton').setAttribute('aria-expanded', 'false'); $('#cropOverlay').hidden = true; activateTool('move'); }
+  if (event.key === 'Escape') { $('#downloadMenu').hidden = true; $('#exportButton').setAttribute('aria-expanded', 'false'); $('#appDownloadMenu').hidden = true; $('#downloadAppButton').setAttribute('aria-expanded', 'false'); $('#cropOverlay').hidden = true; activateTool('move'); }
 });
