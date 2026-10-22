@@ -7,3 +7,41 @@
 .app-download{white-space:nowrap;color:#d7d9d2!important}.app-download span:last-child{color:var(--lime);margin-left:6px;font-size:15px}.app-download:hover{background:#303233}.top-actions{gap:5px}@media(max-width:1050px){.app-download{padding-inline:9px}.app-download .download-text{font-size:9px}}@media(max-width:760px){.app-download{padding:8px!important}.app-download .download-text{font-size:8px}.top-actions{gap:2px}}@media(max-width:420px){.app-download{padding:8px 6px!important}.app-download .download-text{display:none}.app-download span:last-child{margin-left:0}}
 .project-save{border:1px solid #444744;color:#d5d7d0!important;white-space:nowrap}.project-save:hover:not(:disabled){border-color:#72786a;background:#292b29}.project-save:disabled{opacity:.38}@media(max-width:1050px){.project-save{padding-inline:8px}.project-save span{font-size:9px}}@media(max-width:760px){.project-save{padding:8px 7px!important}.project-save span{font-size:8px}}@media(max-width:420px){.project-save{padding:8px 5px!important}.project-save span{font-size:7px}}
 .download-wrap{position:relative;display:inline-flex}.download-menu{position:absolute;right:0;top:calc(100% + 8px);width:194px;padding:6px;background:#222424;border:1px solid #414443;border-radius:7px;box-shadow:0 14px 34px #0009;z-index:20}.download-menu[hidden]{display:none!important}.download-menu button{width:100%;display:flex;align-items:center;gap:10px;border:0;background:transparent;text-align:left;padding:10px;border-radius:4px;color:#e4e5df;font-size:10px}.download-menu button:hover{background:#30332e}.download-menu-icon{width:20px;height:20px;display:grid;place-items:center;border:1px solid #454944;border-radius:4px;color:var(--lime);font-size:13px}.download-menu small{display:block;color:#8f938d;font:8px var(--mono);margin-top:3px}.download-menu button>span:last-child{margin-left:0}.download-menu button:focus-visible{outline:1px solid var(--lime)}@media(max-width:420px){.download-menu{right:-5px}}
+
+/* Mobile editor layouts: keep the canvas usable in either phone orientation. */
+@media(max-width:760px) and (orientation:portrait){
+  .canvas-area{min-height:0}
+  .canvas-stage{touch-action:pan-x pan-y}
+  .canvas-toolbar{height:40px;min-height:40px}
+  .canvas-footer{height:31px;min-height:31px}
+  .properties{width:min(360px,92vw);overscroll-behavior:contain;padding-bottom:max(20px,env(safe-area-inset-bottom))}
+  .panel-section{scroll-margin-top:12px}
+  .tool{touch-action:manipulation}
+}
+@media(max-width:900px) and (orientation:landscape) and (max-height:520px){
+  .topbar{height:48px;min-height:48px;padding-inline:10px}
+  .brand{font-size:13px}
+  .workspace{height:calc(100dvh - 48px);grid-template-columns:52px minmax(0,1fr)}
+  .tool-rail{padding:5px 2px;gap:2px}
+  .tool{width:46px;min-height:41px;gap:1px;font-size:7px}
+  .tool-glyph{font-size:16px;line-height:17px}
+  .rail-divider{margin:3px 0}
+  .canvas-toolbar{height:34px;min-height:34px;padding-inline:7px}
+  .canvas-footer{height:25px;min-height:25px}
+  .canvas-footer #canvasHint{display:none}
+  .properties{top:48px;width:min(360px,72vw);padding-bottom:max(18px,env(safe-area-inset-bottom))}
+  .panel-heading{height:58px}
+  .properties .panel-section{padding-block:10px}
+  .slider-row{margin-block:9px 12px}
+  .preset-swatch{height:30px}
+}
+
+.app-download-wrap{position:relative;display:inline-flex}
+.app-download{border:0;white-space:nowrap}
+.app-download-menu{position:absolute;right:0;top:calc(100% + 8px);width:190px;padding:6px;background:#222424;border:1px solid #414443;border-radius:7px;box-shadow:0 14px 34px #0009;z-index:25}
+.app-download-menu[hidden]{display:none!important}
+.app-download-menu a{width:100%;display:flex;align-items:center;gap:10px;border:0;background:transparent;text-align:left;padding:10px;border-radius:4px;color:#e4e5df;font-size:10px;text-decoration:none}
+.app-download-menu a:hover,.app-download-menu a:focus-visible{background:#30332e;outline:none}
+.app-download-menu-icon{width:20px;height:20px;flex:none;display:grid;place-items:center;border:1px solid #454944;border-radius:4px;color:var(--lime);font-size:13px}
+.app-download-menu small{display:block;color:#8f938d;font:8px var(--mono);margin-top:3px}
+@media(max-width:420px){.app-download-menu{right:-5px}}
